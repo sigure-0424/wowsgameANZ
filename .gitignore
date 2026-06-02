@@ -7,11 +7,47 @@ __pycache__/
 
 # Local DB and outputs
 *.db
+*.sqlite
+*.sqlite3
 *.log
 run_output.txt
 run_results.txt
 analyze_out.txt
 parse_out*.txt
+
+# Build artifacts and caches
+target/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+
+# Large archives and binaries
+*.zip
+*.7z
+*.rar
+*.tar
+*.gz
+*.bz2
+*.xz
+*.iso
+*.bin
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Large data/model formats
+*.parquet
+*.feather
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.joblib
+*.pt
+*.pth
+*.onnx
 
 # Analysis outputs
 wows_analysis/
