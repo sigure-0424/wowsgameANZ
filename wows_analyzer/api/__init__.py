@@ -1,0 +1,1 @@
+"""Wargaming API integration layer."""

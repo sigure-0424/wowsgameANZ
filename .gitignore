@@ -52,6 +52,10 @@ build/
 # Analysis outputs
 wows_analysis/
 
+# Local replay/test payloads
+/test*.jl
+*.wowsreplay
+
 # Reference repo (do not track)
 wows_toolkit_src/
 tmp_wows_toolkit_check/

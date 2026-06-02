@@ -1,0 +1,15 @@
+{
+  "app_id": "66f792c4a2e69715480e01256153c963",
+  "server_region": "ASIA",
+  "game_root": "E:\\SteamLibrary\\steamapps\\common\\World of Warships",
+  "replay_folder": "E:\\SteamLibrary\\steamapps\\common\\World of Warships\\replays",
+  "last_build_number": 0,
+  "min_battles_for_stats": 30,
+  "api_delay_ms": 100,
+  "cache_ttl_hours": 24,
+  "default_game_mode_filter": [
+    "RandomBattle"
+  ],
+  "output_path": "./wows_analysis/",
+  "replayshark_version": ""
+}
