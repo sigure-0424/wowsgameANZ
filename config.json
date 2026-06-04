@@ -11,5 +11,6 @@
     "RandomBattle"
   ],
   "output_path": "./wows_analysis/",
-  "replayshark_version": ""
+  "replayshark_version": "",
+  "language": "ja"
 }

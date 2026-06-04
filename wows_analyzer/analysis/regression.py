@@ -16,18 +16,23 @@ def logistic_regression(df: pd.DataFrame) -> dict[str, Any]:
     np = importlib.import_module("numpy")
     smf = importlib.import_module("statsmodels.formula.api")
 
-    data = df[
-        [
-            "won",
-            "own_damage",
-            "own_survived",
-            "winrate_delta",
-            "ally_winrate_worst",
-            "enemy_winrate_worst",
-            "sink_delta_t5",
-            "own_tier_disadvantage",
-        ]
-    ].dropna()
+    cols = [
+        "won",
+        "own_damage",
+        "own_survived",
+        "winrate_delta",
+        "ally_winrate_worst",
+        "enemy_winrate_worst",
+        "sink_delta_t5",
+        "own_tier_disadvantage",
+    ]
+    
+    # Check if all columns exist
+    missing = [c for c in cols if c not in df.columns]
+    if missing:
+        return {"error": f"missing_columns: {missing}", "n": int(len(df))}
+
+    data = df[cols].dropna()
 
     if len(data) < 30:
         return {"error": "insufficient_rows", "n": int(len(data))}

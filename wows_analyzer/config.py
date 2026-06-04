@@ -22,6 +22,7 @@ class AppConfig:
     default_game_mode_filter: list[str] = field(default_factory=lambda: ["RandomBattle"])
     output_path: str = "./wows_analysis/"
     replayshark_version: str = ""
+    language: str = "ja"
 
     @classmethod
     def load(cls, path: Path | None = None) -> "AppConfig":

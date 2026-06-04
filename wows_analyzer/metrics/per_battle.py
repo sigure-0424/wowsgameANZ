@@ -70,6 +70,7 @@ def compute_battle_stats(repo: Repository, replay_hash: str, ribbons: list[dict]
         kills_by_attacker[int(aggressor)] += 1
 
     sunk_ids = {int(s["entity_id"]) for s in sink_rows}
+    own_sink_clock = next((float(s["clock"]) for s in sink_rows if int(s["entity_id"]) == own_entity_id), None)
 
     own_damage = float(dmg_by_attacker.get(own_entity_id, 0.0))
     own_kills = int(kills_by_attacker.get(own_entity_id, 0))
@@ -147,6 +148,14 @@ def compute_battle_stats(repo: Repository, replay_hash: str, ribbons: list[dict]
     }
     dd = compute_dd_metrics(ribbons or []) if own_ship_type == "Destroyer" else dd_defaults
 
+    # First blood
+    first_sink = sink_rows[0] if sink_rows else None
+    own_first_blood = 0
+    if first_sink:
+        victim = int(first_sink["entity_id"])
+        if kill_map.get(victim) == own_entity_id:
+            own_first_blood = 1
+
     row = {
         "replay_hash": replay_hash,
         "won": won,
@@ -158,6 +167,8 @@ def compute_battle_stats(repo: Repository, replay_hash: str, ribbons: list[dict]
         "own_damage": own_damage,
         "own_kills": own_kills,
         "own_deaths": own_deaths,
+        "own_sink_clock": own_sink_clock,
+        "own_first_blood": own_first_blood,
         "own_kd": own_kills / max(own_deaths, 1),
         "own_survived": own_survived,
         "own_damage_per_min": own_damage_per_min,

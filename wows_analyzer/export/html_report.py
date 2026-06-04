@@ -6,6 +6,47 @@ from pathlib import Path
 
 import pandas as pd
 
+from wows_analyzer.analysis.labels import metric_label, slice_label
+
+
+METRIC_DESCRIPTIONS: dict[str, str] = {
+    "own_damage": "Total damage dealt by you.",
+    "own_kills": "Ships destroyed by you.",
+    "own_kd": "Your kills divided by deaths.",
+    "own_survived": "Whether you survived the battle.",
+    "own_dmg_share": "Your share of allied total damage.",
+    "ally_avg_winrate": "Average ally historical win rate.",
+    "enemy_avg_winrate": "Average enemy historical win rate.",
+    "winrate_delta": "Ally avg win rate minus enemy avg.",
+    "damage_delta": "Ally total damage minus enemy total.",
+    "kill_delta": "Ally total kills minus enemy total.",
+    "sink_delta_t5": "Team sink lead at 5 minutes.",
+    "sink_delta_t10": "Team sink lead at 10 minutes.",
+    "sink_delta_t15": "Team sink lead at 15 minutes.",
+    "own_tier_disadvantage": "How many tiers above your ship the max tier was.",
+}
+
+
+COLUMN_RENAME = {
+    "slice_name": "Scope",
+    "metric_name": "Metric",
+    "metric_note": "Meaning",
+    "r": "Correlation (r)",
+    "p": "p-value",
+    "n": "Samples",
+    "class": "Signal",
+}
+
+
+def _format_corr_table(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    out["Correlation (r)"] = out["r"].map(lambda v: f"{float(v):+.3f}")
+    out["p-value"] = out["p"].map(lambda v: f"{float(v):.4f}")
+    out["Samples"] = out["n"].astype(int)
+    out = out.rename(columns=COLUMN_RENAME)
+    keep = ["Scope", "Metric", "Meaning", "Correlation (r)", "p-value", "Samples", "Signal"]
+    return out[keep]
+
 
 def export_html_report(output_path: Path, battle_stats_df: pd.DataFrame, correlation_rows: list[dict]) -> None:
     output_path.mkdir(parents=True, exist_ok=True)
@@ -24,6 +65,9 @@ def export_html_report(output_path: Path, battle_stats_df: pd.DataFrame, correla
         corr_df["p"] = corr_df["p"].astype(float)
         corr_df = corr_df[corr_df["r"].apply(lambda v: math.isfinite(v))]
         corr_df = corr_df[corr_df["p"].apply(lambda v: math.isfinite(v))]
+        corr_df["metric_name"] = corr_df["metric"].map(metric_label)
+        corr_df["metric_note"] = corr_df["metric"].map(lambda m: METRIC_DESCRIPTIONS.get(m, ""))
+        corr_df["slice_name"] = corr_df["slice"].map(slice_label)
 
     if corr_df.empty:
         chart_html = "<h2>No correlation results available.</h2>"
@@ -32,8 +76,11 @@ def export_html_report(output_path: Path, battle_stats_df: pd.DataFrame, correla
     else:
         corr_df["abs_r"] = corr_df["r"].abs()
         corr_df = corr_df.sort_values("abs_r", ascending=False)
-        significant = corr_df[corr_df["p"] <= 0.05].copy()
-        nonsignificant = corr_df[corr_df["p"] > 0.05].copy()
+        overall_df = corr_df[corr_df["slice"] == "overall"].copy()
+        if overall_df.empty:
+            overall_df = corr_df.copy()
+        significant = overall_df[overall_df["p"] <= 0.05].copy()
+        nonsignificant = overall_df[overall_df["p"] > 0.05].copy()
 
         def classify(row: pd.Series) -> str:
             r = abs(float(row["r"]))
@@ -53,15 +100,19 @@ def export_html_report(output_path: Path, battle_stats_df: pd.DataFrame, correla
         else:
             fig = px.bar(
                 corr_df.head(12),
-                x="metric",
+                x="metric_name",
                 y="r",
                 color="class",
                 title="Top Correlations With Win (|r| sorted)",
             )
             chart_html = fig.to_html(full_html=False, include_plotlyjs="cdn")
 
-        sig_table_html = significant.head(15).to_html(index=False)
-        nonsig_table_html = nonsignificant.head(15).to_html(index=False)
+        sig_cols = ["slice_name", "metric_name", "metric_note", "r", "p", "n", "class"]
+        nonsig_cols = ["slice_name", "metric_name", "metric_note", "r", "p", "n", "class"]
+        sig_pretty = _format_corr_table(significant.head(15)[sig_cols]) if not significant.empty else pd.DataFrame()
+        nonsig_pretty = _format_corr_table(nonsignificant.head(15)[nonsig_cols]) if not nonsignificant.empty else pd.DataFrame()
+        sig_table_html = sig_pretty.to_html(index=False) if not sig_pretty.empty else "<p>No significant metrics in overall scope.</p>"
+        nonsig_table_html = nonsig_pretty.to_html(index=False) if not nonsig_pretty.empty else "<p>No non-significant metrics in overall scope.</p>"
 
     known_outcome = 0
     if "won" in battle_stats_df.columns:
@@ -127,14 +178,15 @@ def export_html_report(output_path: Path, battle_stats_df: pd.DataFrame, correla
   {summary}
     <div class=\"section\">
         <h2>Correlation Overview</h2>
+        <p>Positive r means "higher metric tends to increase win chance"; negative r means the opposite.</p>
         {chart_html}
     </div>
     <div class=\"section\">
-        <h2>Significant Metrics (p <= 0.05)</h2>
+        <h2>Significant Metrics (Overall, p <= 0.05)</h2>
         {sig_table_html}
     </div>
     <div class=\"section\">
-        <h2>Non-significant Metrics (Reference)</h2>
+        <h2>Non-significant Metrics (Overall, reference)</h2>
         {nonsig_table_html}
     </div>
 </body>

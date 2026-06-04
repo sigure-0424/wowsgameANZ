@@ -6,8 +6,9 @@ import json
 from pathlib import Path
 from typing import Any
 
+from rich.text import Text
 from textual.app import App, ComposeResult
-from textual.containers import Container
+from textual.containers import Container, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Footer, Header, Static
 
@@ -43,6 +44,8 @@ def cmd_settings(args: argparse.Namespace) -> None:
             updates["cache_ttl_hours"] = args.cache_ttl_hours
         if args.output_path is not None:
             updates["output_path"] = args.output_path
+        if args.language is not None:
+            updates["language"] = args.language
 
         p.config.update(**updates)
         p.save_config()
@@ -118,7 +121,7 @@ class TextViewScreen(Screen[None]):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        yield Container(Static(self.text, id="body"), id="screen-body")
+        yield VerticalScroll(Static(Text.from_ansi(self.text), id="body"), id="screen-body")
         yield Footer()
 
     BINDINGS = [
@@ -160,7 +163,7 @@ class AnalyzerTUI(App[None]):
     }
     #body {
         width: 100%;
-        height: 100%;
+        height: auto;
     }
     """
 
@@ -199,12 +202,13 @@ class AnalyzerTUI(App[None]):
             parsed_ok=parsed_ok,
             parse_errors=parse_errors,
             hidden_profiles=hidden_profiles,
+            lang=self.pipeline.config.language,
         )
 
         body = render_main(state)
         if status:
             body += f"\nStatus: {status}\n"
-        self.query_one("#main-text", Static).update(body)
+        self.query_one("#main-text", Static).update(Text.from_ansi(body))
 
     def action_show_settings(self) -> None:
         text = render_settings(self.pipeline.config)
@@ -321,6 +325,7 @@ def build_parser() -> argparse.ArgumentParser:
     settings.add_argument("--api-delay-ms", type=int)
     settings.add_argument("--cache-ttl-hours", type=int)
     settings.add_argument("--output-path")
+    settings.add_argument("--language", choices=["en", "ja"])
 
     return parser
 

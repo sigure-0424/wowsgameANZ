@@ -81,6 +81,8 @@ SCHEMA_SQL = [
         own_deaths              INTEGER,
         own_kd                  REAL,
         own_survived            INTEGER,
+        own_sink_clock          REAL,
+        own_first_blood         INTEGER DEFAULT 0,
         own_damage_per_min      REAL,
         own_dmg_share           REAL,
         own_torp_hits           INTEGER,
@@ -131,4 +133,16 @@ def init_db(conn: sqlite3.Connection) -> None:
     cur = conn.cursor()
     for statement in SCHEMA_SQL:
         cur.execute(statement)
+    
+    # Migration: Add own_sink_clock to battle_stats if missing
+    try:
+        cur.execute("SELECT own_sink_clock FROM battle_stats LIMIT 1")
+    except sqlite3.OperationalError:
+        cur.execute("ALTER TABLE battle_stats ADD COLUMN own_sink_clock REAL")
+
+    try:
+        cur.execute("SELECT own_first_blood FROM battle_stats LIMIT 1")
+    except sqlite3.OperationalError:
+        cur.execute("ALTER TABLE battle_stats ADD COLUMN own_first_blood INTEGER DEFAULT 0")
+
     conn.commit()
