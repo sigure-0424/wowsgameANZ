@@ -22,6 +22,9 @@ async def get_player_clan_id(client: WGClient, account_id: int) -> int | None:
     return int(clan_id) if clan_id else None
 
 
+# Simple in-memory cache to avoid redundant clan average winrate lookups during a single session
+_CLAN_AVG_CACHE: dict[int, float] = {}
+
 async def get_clan_member_ids(client: WGClient, clan_id: int) -> list[int]:
     data = await client.get_json(
         "wows/clans/info/",
@@ -34,9 +37,18 @@ async def get_clan_member_ids(client: WGClient, clan_id: int) -> list[int]:
     row = data.get("data", {}).get(str(clan_id))
     if not row:
         return []
-    members = row.get("members", [])
+    
+    # Handle both list and dictionary (WG API inconsistency)
+    members_raw = row.get("members", [])
+    if isinstance(members_raw, dict):
+        members = list(members_raw.values())
+    else:
+        members = members_raw
+
     ids: list[int] = []
     for m in members:
+        if not isinstance(m, dict):
+            continue
         aid = m.get("account_id")
         if aid:
             ids.append(int(aid))
@@ -44,6 +56,9 @@ async def get_clan_member_ids(client: WGClient, clan_id: int) -> list[int]:
 
 
 async def get_clan_avg_winrate(client: WGClient, clan_id: int, exclude_account_id: int | None = None) -> float | None:
+    if clan_id in _CLAN_AVG_CACHE:
+        return _CLAN_AVG_CACHE[clan_id]
+
     member_ids = await get_clan_member_ids(client, clan_id)
     if exclude_account_id is not None:
         member_ids = [m for m in member_ids if m != exclude_account_id]
@@ -63,4 +78,6 @@ async def get_clan_avg_winrate(client: WGClient, clan_id: int, exclude_account_i
 
     if not rates:
         return None
-    return float(mean(rates))
+    avg = float(mean(rates))
+    _CLAN_AVG_CACHE[clan_id] = avg
+    return avg

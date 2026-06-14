@@ -19,7 +19,7 @@ class Repository:
     db_path: Path = Path("analyzer.db")
 
     def __post_init__(self) -> None:
-        self.conn = sqlite3.connect(self.db_path)
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         init_db(self.conn)
 
@@ -240,6 +240,10 @@ class Repository:
 
     def fetch_all_battle_stats(self) -> list[sqlite3.Row]:
         return list(self.conn.execute("SELECT * FROM battle_stats").fetchall())
+
+    def get_total_battle_count(self) -> int:
+        row = self.conn.execute("SELECT COUNT(1) AS n FROM battles").fetchone()
+        return int(row["n"]) if row else 0
 
     def commit(self) -> None:
         self.conn.commit()
